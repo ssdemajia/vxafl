@@ -57,14 +57,14 @@
 /* Default memory limit for child process (MB): */
 
 #ifndef __x86_64__ 
-#  define MEM_LIMIT         25
+#  define MEM_LIMIT         2000
 #else
-#  define MEM_LIMIT         50
+#  define MEM_LIMIT         2000
 #endif /* ^!__x86_64__ */
 
 /* Default memory limit when running in QEMU mode (MB): */
 
-#define MEM_LIMIT_QEMU      200
+#define MEM_LIMIT_QEMU      2000
 
 /* Number of calibration cycles per every new test case (and for test
    cases that show variable behavior): */

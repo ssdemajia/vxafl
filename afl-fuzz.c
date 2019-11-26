@@ -104,7 +104,7 @@ EXP_ST u8 *in_dir,                    /* Input directory with test cases  */
 EXP_ST u32 exec_tmout = EXEC_TIMEOUT; /* Configurable exec timeout (ms)   */
 static u32 hang_tmout = EXEC_TIMEOUT; /* Timeout used for hang det (ms)   */
 
-EXP_ST u64 mem_limit  = MEM_LIMIT;    /* Memory cap for child (MB)        */
+EXP_ST u64 mem_limit  = MEM_LIMIT;    /* 限制子进程的内存大小Memory cap for child (MB)        */
 
 static u32 stats_update_freq = 1;     /* Stats update frequency (execs)   */
 
@@ -1990,7 +1990,6 @@ EXP_ST void init_forkserver(char** argv) {
   int st_pipe[2], ctl_pipe[2];
   int status;
   s32 rlen;
-      printf("target_path:%s\n", target_path);
   ACTF("Spinning up the fork server...");
   // 创建管道
   if (pipe(st_pipe) || pipe(ctl_pipe)) PFATAL("pipe() failed");
@@ -2014,7 +2013,6 @@ EXP_ST void init_forkserver(char** argv) {
     }
 
     if (mem_limit) {
-
       r.rlim_max = r.rlim_cur = ((rlim_t)mem_limit) << 20;
 
 #ifdef RLIMIT_AS
@@ -2046,19 +2044,19 @@ EXP_ST void init_forkserver(char** argv) {
 
     setsid();
 
-    dup2(dev_null_fd, 1); // 使文件描述符1同样指向dev_null_fd的文件
-    dup2(dev_null_fd, 2);
+    // dup2(dev_null_fd, 1); // 使文件描述符1同样指向dev_null_fd的文件
+    // dup2(dev_null_fd, 2);
 
-    if (out_file) {
+    // if (out_file) {
 
-      dup2(dev_null_fd, 0);
+      // dup2(dev_null_fd, 0);
 
-    } else {
+    // } else {
 
-      dup2(out_fd, 0);
-      close(out_fd);
+      // dup2(out_fd, 0);
+      // close(out_fd);
 
-    }
+    // }
 
     /* Set up control and status pipes, close the unneeded original fds. */
     // 子进程使用FORKSRV_FD来读，使用FORKSRV_FD+1来写入状态
@@ -2100,7 +2098,7 @@ EXP_ST void init_forkserver(char** argv) {
 
     /* Use a distinctive bitmap signature to tell the parent about execv()
        falling through. */
-
+    FATAL("Target is exit, because of %s", strerror(errno));
     *(u32*)trace_bits = EXEC_FAIL_SIG;
     exit(0);
 
@@ -2363,7 +2361,7 @@ static u8 run_target(char** argv, u32 timeout) {
 
       /* Use a distinctive bitmap value to tell the parent about execv()
          falling through. */
-
+      PFATAL("error:%s\n", strerror(errno));
       *(u32*)trace_bits = EXEC_FAIL_SIG;
       exit(0);
 
@@ -2560,7 +2558,7 @@ static u8 calibrate_case(char** argv, struct queue_entry* q, u8* use_mem,
 
   u64 start_us, stop_us;
 
-  s32 old_sc = stage_cur, old_sm = stage_max;
+  s32 old_sc = stage_cur, old_sm = stage_max; // 当前阶段stage_cur
   u32 use_tmout = exec_tmout;
   u8* old_sn = stage_name;
 
@@ -2581,7 +2579,7 @@ static u8 calibrate_case(char** argv, struct queue_entry* q, u8* use_mem,
      count its spin-up time toward binary calibration. */
 
   if (dumb_mode != 1 && !no_forkserver && !forksrv_pid)
-    init_forkserver(argv);
+    init_forkserver(argv); // 初始化forkserver
 
   if (q->exec_cksum) memcpy(first_trace, trace_bits, MAP_SIZE);
 
@@ -2715,7 +2713,7 @@ static void check_map_coverage(void) {
 
 /* Perform dry run of all test cases to confirm that the app is working as
    expected. This is done only for the initial inputs, and only once. */
-// 只执行一次
+// 只执行一次，对所有测试用例执行一遍，生成queue、bitmap
 static void perform_dry_run(char** argv) {
 
   struct queue_entry* q = queue;
@@ -2728,21 +2726,21 @@ static void perform_dry_run(char** argv) {
     u8  res;
     s32 fd;
 
-    u8* fn = strrchr(q->fname, '/') + 1;
+    u8* fn = strrchr(q->fname, '/') + 1; // 测试用例名称
 
     ACTF("Attempting dry run with '%s'...", fn);
 
-    fd = open(q->fname, O_RDONLY);
+    fd = open(q->fname, O_RDONLY);  // 打开测试用例
     if (fd < 0) PFATAL("Unable to open '%s'", q->fname);
 
     use_mem = ck_alloc_nozero(q->len);
 
-    if (read(fd, use_mem, q->len) != q->len)
+    if (read(fd, use_mem, q->len) != q->len) // 读入buffer中
       FATAL("Short read from '%s'", q->fname);
 
     close(fd);
 
-    res = calibrate_case(argv, q, use_mem, 0, 1);
+    res = calibrate_case(argv, q, use_mem, 0, 1); // 对该用例进行校正
     ck_free(use_mem);
 
     if (stop_soon) return;
@@ -4975,7 +4973,7 @@ static u8 could_be_interest(u32 old_val, u32 new_val, u8 blen, u8 check_le) {
 /* Take the current entry from the queue, fuzz it for a while. This
    function is a tad too long... returns 0 if fuzzed successfully, 1 if
    skipped or bailed out. */
-
+// 从队列中取一个测试用例
 static u8 fuzz_one(char** argv) {
 
   s32 len, fd, temp_len, i, j;
@@ -7640,73 +7638,21 @@ EXP_ST void setup_signal_handlers(void) {
 /* Rewrite argv for QEMU. */
 
 static char** get_qemu_argv(u8* own_loc, char** argv, int argc) {
-
-  char** new_argv = ck_alloc(sizeof(char*) * (argc + 4));
+  // 当前argv[0]为@@,argv[1...argc-1]是我们传入的参数
+  char** new_argv = ck_alloc(sizeof(char*) * argc); // 参数最后一个必须是NULL
   u8 *tmp, *cp, *rsl, *own_copy;
-
+  
   /* Workaround for a QEMU stability glitch. */
 
   setenv("QEMU_LOG", "nochain", 1);
+  
+  memcpy(new_argv, argv + 1, sizeof(char*) * argc); 
 
-  memcpy(new_argv + 3, argv + 1, sizeof(char*) * argc);
+  if (access(new_argv[0], X_OK))
+    FATAL("Unable to find '%s'", new_argv[0]);
+  target_path = new_argv[0];
 
-  new_argv[2] = target_path;
-  new_argv[1] = "--";
-
-  /* Now we need to actually find the QEMU binary to put in argv[0]. */
-
-  tmp = getenv("AFL_PATH");
-
-  if (tmp) {
-
-    cp = alloc_printf("%s/afl-qemu-trace", tmp);
-
-    if (access(cp, X_OK))
-      FATAL("Unable to find '%s'", tmp);
-
-    target_path = new_argv[0] = cp;
-    return new_argv;
-
-  }
-
-  own_copy = ck_strdup(own_loc);
-  rsl = strrchr(own_copy, '/');
-
-  if (rsl) {
-
-    *rsl = 0;
-
-    cp = alloc_printf("%s/afl-qemu-trace", own_copy);
-    ck_free(own_copy);
-
-    if (!access(cp, X_OK)) {
-
-      target_path = new_argv[0] = cp;
-      return new_argv;
-
-    }
-
-  } else ck_free(own_copy);
-
-  if (!access(BIN_PATH "/afl-qemu-trace", X_OK)) {
-
-    target_path = new_argv[0] = ck_strdup(BIN_PATH "/afl-qemu-trace");
-    return new_argv;
-
-  }
-
-  SAYF("\n" cLRD "[-] " cRST
-       "Oops, unable to find the 'afl-qemu-trace' binary. The binary must be built\n"
-       "    separately by following the instructions in qemu_mode/README.qemu. If you\n"
-       "    already have the binary installed, you may need to specify AFL_PATH in the\n"
-       "    environment.\n\n"
-
-       "    Of course, even without QEMU, afl-fuzz can still work with binaries that are\n"
-       "    instrumented at compile time with afl-gcc. It is also possible to use it as a\n"
-       "    traditional \"dumb\" fuzzer by specifying '-n' in the command line.\n");
-
-  FATAL("Failed to locate 'afl-qemu-trace'.");
-
+  return new_argv;
 }
 
 
@@ -7927,7 +7873,7 @@ int main(int argc, char** argv) {
         if (qemu_mode) FATAL("Multiple -Q options not supported");
         qemu_mode = 1;
 
-        if (!mem_limit_given) mem_limit = MEM_LIMIT_QEMU;
+        if (!mem_limit_given) mem_limit = MEM_LIMIT_QEMU; // 限制内存使用
 
         break;
 
@@ -8003,20 +7949,17 @@ int main(int argc, char** argv) {
 
   if (extras_dir) load_extras(extras_dir);
 
-  if (!timeout_given) find_timeout();
+  if (!timeout_given) find_timeout(); // 超时时间
 
-  detect_file_args(argv + optind + 1);
+  detect_file_args(argv + optind + 1); // 检测@@ 从文件输入测试用例
 
   if (!out_file) setup_stdio_file();
 
-  check_binary(argv[optind]);
+  // check_binary(argv[optind]); // 检查是不是脚本什么的
 
-  start_time = get_cur_time();
+  start_time = get_cur_time(); // 开始时间
 
-  if (qemu_mode)
-    use_argv = get_qemu_argv(argv[0], argv + optind, argc - optind);
-  else
-    use_argv = argv + optind;
+  use_argv = get_qemu_argv(argv[0], argv + optind, argc - optind); // 得到qemu参数
 
   perform_dry_run(use_argv); // 执行testcase
 

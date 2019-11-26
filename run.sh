@@ -14,36 +14,44 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # -----------------------------------------
-# QEMU build script
+# vxafl run script
 # --------------------------------------
 #
 # Written by shaoshuai <2chashao@gmail.com>
 #
-
 QEMU_VERSION="2.10.0"
-CPU_CORE_NUMS=`cat /proc/cpuinfo| grep processor | wc -l`
-echo "++++++++++++++++++++++++++++++++++++++++++++++++"
-echo "+  AFL base vxworks image fuzzer build script  +"
-echo "++++++++++++++++++++++++++++++++++++++++++++++++"
-
-# vxworks指令集
 CPU_TARGET="i386"
-echo "[*] Configuring QEMU"
-cd qemu-$QEMU_VERSION
+IMAGE_PATH="$HOME/MS-DOS.vmdk"
+VXWORKS_PATH="$HOME/vxWorks"
+FUZZ_IN="./fuzzin"
+FUZZ_OUT="./fuzzout"
+CPU_CORE_NUMS=`cat /proc/cpuinfo| grep processor | wc -l`
+QEMU_EXEC="qemu-$QEMU_VERSION/$CPU_TARGET-softmmu/qemu-system-i386"
+echo "++++++++++++++++++++++++++++++++++++++++++++++++"
+echo "+   AFL base vxworks image fuzzer run script   +"
+echo "++++++++++++++++++++++++++++++++++++++++++++++++"
 
-CFLAGS="-O3 -ggdb" ./configure \
-  --disable-gtk --enable-sdl --disable-vnc \
-  --target-list="$CPU_TARGET-softmmu" || exit 1
-# 目前先打开sdl，之后在正式版本中关闭
-
-echo "[*] Build QEMU"
-make -j $CPU_CORE_NUMS || exit 1
-echo "[+] Build QEMU successful!"
-
-cd ..
-
-echo "[*] Build AFL"
-make -j $CPU_CORE_NUMS || exit 1
-echo "[+] Build AFL successful!"
-
-
+if [ "$1" = "image" ]
+then
+    echo "[*] Run image"
+    $QEMU_EXEC -hda $IMAGE_PATH
+    echo "[+] Run complete"
+elif [ "$1" = "afl" ]
+then
+    set -e
+    mkdir -p $FUZZ_IN $FUZZ_OUT
+    echo "[*] Build Qemu"
+    cd qemu-$QEMU_VERSION
+    make -j $CPU_CORE_NUMS
+    echo "[+] Build complete"
+    cd ..
+    echo "[*] Build AFL"
+    make -j $CPU_CORE_NUMS
+    echo "[+] Build complete"
+    echo "[*] Run vxAFL"
+    ./afl-fuzz -Q -i $FUZZ_IN -o $FUZZ_OUT  @@ $PWD/$QEMU_EXEC -hda $IMAGE_PATH 
+    # -vxworks $VXWORKS_PATH
+else
+    echo "[*] Help - './run.sh image' to run image"
+    echo "           './run sh afl'   to run qemu and afl together "
+fi 

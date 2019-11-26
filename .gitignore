@@ -23,3 +23,5 @@ afl-llvm-rt.o
 .vscode
 fuzz_out
 fuzz_in
+fuzzin
+fuzzout
