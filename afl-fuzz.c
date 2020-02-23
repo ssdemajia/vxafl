@@ -2113,8 +2113,8 @@ EXP_ST void init_forkserver(char** argv) {
   fsrv_st_fd  = st_pipe[0];
 
   /* Wait for the fork server to come up, but don't wait too long. */
-
-  it.it_value.tv_sec = ((exec_tmout * FORK_WAIT_MULT) / 1000);
+  unsigned waitting_timeout = 1000; // 等待建立forkserver的连接
+  it.it_value.tv_sec = ((waitting_timeout * exec_tmout * FORK_WAIT_MULT) / 1000);
   it.it_value.tv_usec = ((exec_tmout * FORK_WAIT_MULT) % 1000) * 1000;
 
   setitimer(ITIMER_REAL, &it, NULL);
@@ -2421,6 +2421,7 @@ static u8 run_target(char** argv, u32 timeout) {
   if (!WIFSTOPPED(status)) child_pid = 0;
 
   getitimer(ITIMER_REAL, &it);
+  /* 执行时间 */
   exec_ms = (u64) timeout - (it.it_value.tv_sec * 1000 +
                              it.it_value.tv_usec / 1000);
 
