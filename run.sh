@@ -39,7 +39,7 @@ if [ "$1" = "image" ]
 then
     echo "[*] Run image"
     $QEMU_EXEC -hda $IMAGE_PATH -s \
-    # -nographic \
+    -nographic \
     # -monitor stdio \
     # -d out_asm,in_asm,op,op_opt
     echo "[+] Run complete"
