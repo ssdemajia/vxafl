@@ -19,6 +19,9 @@
 #
 # Written by shaoshuai <2chashao@gmail.com>
 #
+stty intr ^]
+echo "[*] ctrl+c remapped to ctrl+] for host"
+
 AFL_TIMEOUT=1000+ # afl超时时间，因为需要运行到测试函数位置，所以需要将其改大一些
 QEMU_VERSION="2.10.0"
 CPU_TARGET="i386"
@@ -42,6 +45,7 @@ then
     echo "[+] Run complete"
 elif [ "$1" = "afl" ]
 then
+    export AFL_DEBUG_CHILD_OUTPUT=1 # 子进程打印
     export AFL_FAST_CAL=1 
     export AFL_SKIP_CPUFREQ=1 # 避免开启performance
     set -e

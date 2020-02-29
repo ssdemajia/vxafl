@@ -4,107 +4,110 @@ break ip_do_fragment
 continue
 然后在虚拟机需要ping 192.168.1.1 -s 3000
 这个函数主要是用于IP数据报太大了，无法在一片中发送，需要将其切分为更小的片段（每一个大小相当于IP头部加原来数据的一部分），使其符合设备帧大小，然后将这些帧放入队列中等待发送
-sk_buff {
-    struct {
-        struct sk_buff *next;  链表中下一个buffer
-        struct sk_buff *prev;  链表中上一个buffer
-        union {
-			struct net_device	*dev;  到达/离开所用的设备
-			unsigned long		dev_scratch;
-			int			ip_defrag_offset;
+
+
+
+	sk_buff {
+	    struct {
+	        struct sk_buff *next;  链表中下一个buffer
+	        struct sk_buff *prev;  链表中上一个buffer
+	        union {
+				struct net_device	*dev;  到达/离开所用的设备
+				unsigned long		dev_scratch;
+				int			ip_defrag_offset;
+			};
+	    }
+	    struct sock *sk;     归属的socket
+	    ktime_t tstamp;      到达/离开的时间
+	    char cb[48] __aligned(8);   控制块，存放私有信息
+	    union {
+			struct {
+				unsigned long	_skb_refdst;  目的条目
+				void		(*destructor)(struct sk_buff *skb);
+			};
+			struct list_head	tcp_tsorted_anchor;
 		};
-    }
-    struct sock *sk;     归属的socket
-    ktime_t tstamp;      到达/离开的时间
-    char cb[48] __aligned(8);   控制块，存放私有信息
-    union {
-		struct {
-			unsigned long	_skb_refdst;  目的条目
-			void		(*destructor)(struct sk_buff *skb);
-		};
-		struct list_head	tcp_tsorted_anchor;
-	};
-    unsigned int	len,  实际数据长度，包括各个片段大小
-				    data_len; 数据长度，当前片段的大小
-	__u16			mac_len,  链路层大小
-				    hdr_len;  cloned skb的可写头部长度
-    __u16			queue_mapping;
-    	__u8			__cloned_offset[0];
-	__u8			cloned:1,  头部是否被克隆
-				    nohdr:1,   负载引用
-				    fclone:2,  skbuff的clone状态
-				    peeked:1,  这个数据包已经准备好了
-				    head_frag:1,
-				    xmit_more:1,
-				    pfmemalloc:1;
-    __u32			headers_start[0];
-    __u8			__pkt_type_offset[0];
-	__u8			pkt_type:3;  Packet类型
-	__u8			ignore_df:1;  允许本地分段 allow local fragmentation
-	__u8			nf_trace:1;   netfiler包追踪标志位
-	__u8			ip_summed:2;  驱动提供的IP校验和
-	__u8			ooo_okay:1;
+	    unsigned int	len,  实际数据长度，包括各个片段大小
+					    data_len; 数据长度，当前片段的大小
+		__u16			mac_len,  链路层大小
+					    hdr_len;  cloned skb的可写头部长度
+	    __u16			queue_mapping;
+	    	__u8			__cloned_offset[0];
+		__u8			cloned:1,  头部是否被克隆
+					    nohdr:1,   负载引用
+					    fclone:2,  skbuff的clone状态
+					    peeked:1,  这个数据包已经准备好了
+					    head_frag:1,
+					    xmit_more:1,
+					    pfmemalloc:1;
+	    __u32			headers_start[0];
+	    __u8			__pkt_type_offset[0];
+		__u8			pkt_type:3;  Packet类型
+		__u8			ignore_df:1;  允许本地分段 allow local fragmentation
+		__u8			nf_trace:1;   netfiler包追踪标志位
+		__u8			ip_summed:2;  驱动提供的IP校验和
+		__u8			ooo_okay:1;
+	    __u8			l4_hash:1;
+	    __u8			sw_hash:1;
+	    __u8			wifi_acked_valid:1;
+	    __u8			wifi_acked:1;
+	    __u8			no_fcs:1;
+	
+	    __u8			encapsulation:1;
+	    __u8			encap_hdr_csum:1;
+	    __u8			csum_valid:1;
+	
+	    __u8			csum_complete_sw:1;
+	    __u8			csum_level:2;
+	    __u8			csum_not_inet:1;
+	    __u8			dst_pending_confirm:1;
+	
+	    __u8			ipvs_property:1;
+	
+	    __u8			inner_protocol_type:1;
+	    __u8			remcsum_offload:1;
+	
+	    union {
+	        __wsum		csum;  校验和
+	        struct {
+	            __u16	csum_start;  从skb->head开始的偏移，从这里开始进行校验和计算
+	            __u16	csum_offset; 从csum_start开始计算的偏移，在这里存放checksum
+	        };
+	    };
+	    __u32			priority;  数据包排队优先级
+	    int			    skb_iif;
+	    __u32			hash;
+	    __be16			vlan_proto;
+	    __u16			vlan_tci;
+	
+	    union {
+	        __u32		mark;
+	        __u32		reserved_tailroom;
+	    };
+	    union {
+	        __be16		inner_protocol;  Protocol (encapsulation)
+	        __u8		inner_ipproto;
+	    };
+	
+	    __u16			inner_transport_header; 传输层头部
+	    __u16			inner_network_header;  网络层头部
+	    __u16			inner_mac_header;  链路层头部
+	
+	    __be16			protocol;  驱动提供的数据包协议
+	    __u16			transport_header;
+	    __u16			network_header;
+	    __u16			mac_header;
+	
+	    /* private: */
+	    __u32			headers_end[0];
+	    sk_buff_data_t		tail;  尾部指针
+	    sk_buff_data_t		end;
+	    unsigned char		*head,  buffer头部指针
+	                *data;    数据头部指针
+	    unsigned int		truesize;  buffer大小
+	    refcount_t		users;   用户数量
+	}
 
-	__u8			l4_hash:1;
-	__u8			sw_hash:1;
-	__u8			wifi_acked_valid:1;
-	__u8			wifi_acked:1;
-	__u8			no_fcs:1;
-
-	__u8			encapsulation:1;
-	__u8			encap_hdr_csum:1;
-	__u8			csum_valid:1;
-
-	__u8			csum_complete_sw:1;
-	__u8			csum_level:2;
-	__u8			csum_not_inet:1;
-	__u8			dst_pending_confirm:1;
-    
-    __u8			ipvs_property:1;
-
-	__u8			inner_protocol_type:1;
-	__u8			remcsum_offload:1;
-
-    union {
-		__wsum		csum;  校验和
-		struct {
-			__u16	csum_start;  从skb->head开始的偏移，从这里开始进行校验和计算
-			__u16	csum_offset; 从csum_start开始计算的偏移，在这里存放checksum
-		};
-	};
-	__u32			priority;  数据包排队优先级
-	int			    skb_iif;
-	__u32			hash;
-	__be16			vlan_proto;
-	__u16			vlan_tci;
-
-    union {
-		__u32		mark;
-		__u32		reserved_tailroom;
-	};
-    union {
-		__be16		inner_protocol;  Protocol (encapsulation)
-		__u8		inner_ipproto;
-	};
-
-	__u16			inner_transport_header; 传输层头部
-	__u16			inner_network_header;  网络层头部
-	__u16			inner_mac_header;  链路层头部
-
-	__be16			protocol;  驱动提供的数据包协议
-	__u16			transport_header;
-	__u16			network_header;
-	__u16			mac_header;
-
-	/* private: */
-	__u32			headers_end[0];
-    sk_buff_data_t		tail;  尾部指针
-	sk_buff_data_t		end;
-	unsigned char		*head,  buffer头部指针
-				*data;    数据头部指针
-	unsigned int		truesize;  buffer大小
-	refcount_t		users;   用户数量
-}
 可以确定data的位置
 sk_buff的图示https://www.cnblogs.com/qq78292959/archive/2012/06/06/2538358.html
 
