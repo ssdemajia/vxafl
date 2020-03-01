@@ -2120,7 +2120,7 @@ EXP_ST void init_forkserver(char** argv) {
   setitimer(ITIMER_REAL, &it, NULL);
 
   rlen = read(fsrv_st_fd, &status, 4); // 读取状态
-
+  printf("[AFL] read from vxafl:%d\n", rlen);
   it.it_value.tv_sec = 0;
   it.it_value.tv_usec = 0;
 

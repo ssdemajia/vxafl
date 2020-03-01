@@ -39,7 +39,7 @@ if [ "$1" = "image" ]
 then
     echo "[*] Run image"
     $QEMU_EXEC -hda $IMAGE_PATH -s \
-    -nographic \
+   -nographic \
     # -monitor stdio \
     # -d out_asm,in_asm,op,op_opt
     echo "[+] Run complete"
@@ -59,7 +59,8 @@ then
     make -j $CPU_CORE_NUMS
     echo "[+] Build complete"
     echo "[*] Run vxAFL"
-    ./afl-fuzz -t $AFL_TIMEOUT -Q -i $FUZZ_IN -o $FUZZ_OUT  @@ $PWD/$QEMU_EXEC -nographic -hda $IMAGE_PATH -s
+#    ./afl-fuzz -t $AFL_TIMEOUT -Q -i $FUZZ_IN -o $FUZZ_OUT  @@ $PWD/$QEMU_EXEC  -hda $IMAGE_PATH -s
+    ./afl-fuzz -t $AFL_TIMEOUT -Q -i $FUZZ_IN -o $FUZZ_OUT  @@ $PWD/venv/bin/python vxafl.py
     # -vxworks $VXWORKS_PATH
 else
     echo "[*] Help - './run.sh image' to run image"
