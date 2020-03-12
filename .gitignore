@@ -23,8 +23,8 @@ afl-llvm-rt.o
 .vscode
 fuzz_out
 fuzz_in
-fuzzin
-fuzzout
+example/fuzzin
+example/fuzzout
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

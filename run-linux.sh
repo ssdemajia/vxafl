@@ -15,8 +15,10 @@ $QEMU_EXEC -hda $IMG/stretch.img \
 	-serial stdio \
 	-display none \
   -kernel $KERNEL/arch/x86_64/boot/bzImage \
-  -net nic \
-  -net user,hostfwd=tcp::8022-:22 \
+  -net nic,model=pcnet,macaddr=DE:CD:AE:EF:3E:10 \
+  -net tap,ifname=tap0,script=no,downscript=no \
+    # -net nic \
+  # -net user,hostfwd=tcp::8022-:22 \
   # -S
   # -net user,host=10.0.2.10,hostfwd=tcp::10022-:22 -net nic
   #-nic tap \
