@@ -60,3 +60,37 @@ ss.cfg
 然后就能运行了sudo bin/syz-manager -config=ss.cfg
 
 syzkaller的问题在于只模糊测试系统调用，而unicorefuzz也模糊测试内核所有代码，而且可以在任意位置运行
+
+ip_output.c下的ip_do_fragment函数https://lkml.org/lkml/2018/8/9/799
+在git checkout 112cbae26d18的源码后编译运行，使用方法https://github.com/google/syzkaller/blob/master/docs/linux/setup_ubuntu-host_qemu-vm_x86-64-kernel.md
+make defconfig
+make kvmconfig
+需要注意的是不要启用KCOV、KASAN
+启用`CONFIG_DEBUG_INFO=y`，然后在`make oldconfig`时，启用gdb python script
+在create_image.sh中修改
+
+```shell
+printf '\nauto eth0\niface eth0 inet dhcp\n\nauto enp0s3\niface enp0s3 inet dhcp\n' | sudo tee -a $DIR/etc/network/interfaces
+```
+
+
+
+在启动linux是会出现
+
+```bash
+[FAILED] Failed to mount /sys/kernel/config.
+You are in emergency mode. After logging in, type "journalctl -xb" to view
+system logs, "systemctl reboot" to reboot, "systemctl default" or ^D to
+try again to boot into default mode.
+```
+
+需要修改.config
+
+```bash
+CONFIG_CONFIGFS_FS=y
+CONFIG_SECURITYFS=y
+make oldconfig
+make -j12
+```
+
+因为configfs用于提供基于ram的虚拟文件系统，与sysfs类似，用于在用户空间管理创建内核对象，常挂载到/sys/kernel/config

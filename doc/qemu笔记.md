@@ -224,6 +224,19 @@ child: fork之后调试子进程，父进程不受影响。
 
 (gdb) set follow-fork-mode child
 
+内核调试
+
+参考https://www.kernel.org/doc/html/v4.14/dev-tools/gdb-kernel-debugging.html
+
+使用`add-symbol-file /home/ss/unicorefuzz/example_module/procfs1.ko 0xffffffffa0000000`添加模块符号，然后查看符号地址
+
+```bash
+(gdb) info symbol 0xffffffffa0000000
+read_callback in section .text of /home/ss/unicorefuzz/example_module/procfs1.ko
+```
+
+可以查看procfs1.ko文件查看write_callback是从哪里开始，我得到的结果是0xffffffffa000000不。
+
 ## QEMU内存
 
 当模糊测试时需要保持当前虚拟机内存状态，用于每次测试后恢复虚拟机状态到函数入口时。

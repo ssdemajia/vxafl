@@ -2044,19 +2044,19 @@ EXP_ST void init_forkserver(char** argv) {
 
     setsid();
 
-    // dup2(dev_null_fd, 1); // 使文件描述符1同样指向dev_null_fd的文件
-    // dup2(dev_null_fd, 2);
+    dup2(dev_null_fd, 1); // 使文件描述符1同样指向dev_null_fd的文件
+    dup2(dev_null_fd, 2);
 
-    // if (out_file) {
+    if (out_file) {
 
-      // dup2(dev_null_fd, 0);
+      dup2(dev_null_fd, 0);
 
-    // } else {
+    } else {
 
-      // dup2(out_fd, 0);
-      // close(out_fd);
+      dup2(out_fd, 0);
+      close(out_fd);
 
-    // }
+    }
 
     /* Set up control and status pipes, close the unneeded original fds. */
     // 子进程使用FORKSRV_FD来读，使用FORKSRV_FD+1来写入状态
@@ -2120,7 +2120,6 @@ EXP_ST void init_forkserver(char** argv) {
   setitimer(ITIMER_REAL, &it, NULL);
 
   rlen = read(fsrv_st_fd, &status, 4); // 读取状态
-
   it.it_value.tv_sec = 0;
   it.it_value.tv_usec = 0;
 
@@ -2325,19 +2324,19 @@ static u8 run_target(char** argv, u32 timeout) {
 
       setsid();
 
-      dup2(dev_null_fd, 1);
-      dup2(dev_null_fd, 2);
+      // dup2(dev_null_fd, 1);
+      // dup2(dev_null_fd, 2);
 
-      if (out_file) {
+      // if (out_file) {
 
-        dup2(dev_null_fd, 0);
+      //   dup2(dev_null_fd, 0);
 
-      } else {
+      // } else {
 
-        dup2(out_fd, 0);
-        close(out_fd);
+      //   dup2(out_fd, 0);
+      //   close(out_fd);
 
-      }
+      // }
 
       /* On Linux, would be faster to use O_CLOEXEC. Maybe TODO. */
 
@@ -7959,8 +7958,10 @@ int main(int argc, char** argv) {
   // check_binary(argv[optind]); // 检查是不是脚本什么的
 
   start_time = get_cur_time(); // 开始时间
-
-  use_argv = get_qemu_argv(argv[0], argv + optind, argc - optind); // 得到qemu参数
+  if (qemu_mode)
+    use_argv = get_qemu_argv(argv[0], argv + optind, argc - optind); // 得到qemu参数
+  else
+    use_argv = argv + optind;
 
   perform_dry_run(use_argv); // 执行testcase
 

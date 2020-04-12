@@ -58,51 +58,31 @@ g->(%esp)
 
 在x64体系结构中FS寄存器与GS寄存器与GDT无关，他们的基值保存在MSR寄存器中
 
+
+
+### 安装qemu
+
+ubuntu apt安装
+
+```c
+sudo apt install qemu
+```
+
 ubuntu apt安装的qemu版本
+
+```bash
 ➜  ~ qemu-system-x86_64 --version
 QEMU emulator version 2.11.1(Debian 1:2.11+dfsg-1ubuntu7.21)
 Copyright (c) 2003-2017 Fabrice Bellard and the QEMU Project developers
+```
 
-### 源码安装qemu
+源码安装
+
 ```c
 wget https://download.qemu.org/qemu-4.2.0.tar.xz
 sudo apt install -y libsdl2-dev build-essential zlib1g-dev pkg-config libglib2.0-dev binutils-dev libboost-all-dev autoconf libtool libssl-dev libpixman-1-dev libpython-dev python-pip python-capstone virtualenv
 ./configure --target-list=x86_64-softmmu --enable-sdl
 ```
-
-ip_output.c下的ip_do_fragment函数https://lkml.org/lkml/2018/8/9/799
-在git checkout 112cbae26d18的源码后编译运行，使用方法https://github.com/google/syzkaller/blob/master/docs/linux/setup_ubuntu-host_qemu-vm_x86-64-kernel.md
-make defconfig
-make kvmconfig
-需要注意的是不要启用KCOV、KASAN
-启用`CONFIG_DEBUG_INFO=y`，然后在`make oldconfig`时，启用gdb python script
-在create_image.sh中修改
-
-```shell
-printf '\nauto eth0\niface eth0 inet dhcp\n\nauto enp0s3\niface enp0s3 inet dhcp\n' | sudo tee -a $DIR/etc/network/interfaces
-```
-
-
-
-在启动linux是会出现
-
-```bash
-[FAILED] Failed to mount /sys/kernel/config.
-You are in emergency mode. After logging in, type "journalctl -xb" to view
-system logs, "systemctl reboot" to reboot, "systemctl default" or ^D to
-try again to boot into default mode.
-```
-
-需要修改.config
-
-```bash
-CONFIG_CONFIGFS_FS=y
-CONFIG_SECURITYFS=y
-make oldconfig
-make -j12
-```
-
-因为configfs用于提供基于ram的虚拟文件系统，与sysfs类似，用于在用户空间管理创建内核对象，常挂载到/sys/kernel/config
 
 然后使用qemu运行
 
@@ -125,13 +105,31 @@ IMG=/home/ss/IMAGE
   -kernel $KERNEL/arch/x86_64/boot/bzImage
 ```
 
+## 获得目标函数地址
 
+模块的地址加载后可以在`/sys/module/模块名/sections/.text`获得
 
+在获得procfs1的地址`0xffffffffa0000000`后，通过`readelf -s procfs1.ko`得到模块内符号的相对位置，
 
+```bash
+Symbol table '.symtab' contains 35 entries:
+   Num:    Value          Size Type    Bind   Vis      Ndx Name
+    17: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS procfs1.c
+    18: 0000000000000000    11 FUNC    LOCAL  DEFAULT    2 read_callback
+    19: 000000000000000b    73 FUNC    LOCAL  DEFAULT    2 write_callback
+    20: 0000000000000054    72 FUNC    LOCAL  DEFAULT    2 simple_init
+```
 
+通过计算得到write_callback地址``0xffffffffa0000000+b`等于`0xffffffffa000000b`
 
+### QA
+
+Q:出现`qemu-system-x86_64: -net user,hostfwd=tcp::8022-:22: Could not set up host forwarding rule 'tcp::8022-:22'`
+
+A:之前的qemu进程没有关闭，需要手动kill它
 
 ## 参考
+
 1. kernel physical page allocation https://www.kernel.org/doc/gorman/html/understand/understand009.html
 2. slab allocator  https://www.kernel.org/doc/gorman/html/understand/understand011.html
 3. 添加用户 https://blog.csdn.net/timothy93bp/article/details/77679000
