@@ -21,6 +21,8 @@ tcg_qemu_tb_exec：
 
 请注意，TCG目标可能使用与默认值不同的`tcg_qemu_tb_exec`定义（该定义仅调用`tcg_target_qemu_prologue()`发出的`prologue.code`）。
 
+
+
 ## Triforce内部实现文档
 
 ### ProjectTriforce内部
@@ -70,7 +72,11 @@ ProjectTriforce的AFL版本与库存的AFL有所不同。标准AFL已经支持QE
 
 ProjectTriforce的QEMU版本大量借鉴了AFL QEMU补丁。这些补丁已经包含了将执行边缘追踪到AFL边缘图中的代码。但是，由于QEMU的执行策略，我们发现跟踪中存在一个细微的错误：有时QEM
 
+### TranslationBlock的执行路径
 
+```c
+cpu_tb_exec
+```
 
 TB的执行路径:
 
@@ -641,6 +647,18 @@ TB会被链接成链表，当每个TB被执行完后，控制权将会回到QEMU
 
 在target/i386/translate.c中翻译target也就是客户操作系统代码到TCG
 
+## Ubuntu下安装MIPS编译器
+
+```bash
+sudo apt-get update
+sudo apt-get install emdebian-archive-keyring
+sudo apt-get install linux-libc-dev-mips-cross libc6-mips-cross libc6-dev-mips-cross binutils-mips-linux-gnu gcc-7-mips-linux-gnu g+±7-mips-linux-gnu
+```
+
+然后使用`/usr/bin/mips-linux-gnu-gcc-7 test.c -o test -static`编译
+
+运行程序`qemu-mips -d in_asm,op,out_asm -D output.txt test`得到HOST代码、TCG中间代码、Guest代码。
+
 ## 名词解释
 
 guest：guest operating system 客户操作系统
@@ -656,8 +674,18 @@ qemu设备模拟原理 https://www.qemu.org/2018/02/09/understanding-qemu-device
 
 对QEMU二进制转换讲解 https://coscup.org/2018/en/programs/how-qemu-works/
 
+对应的ppt https://www.slideshare.net/ChenWei15/from-binary-to-binary-how-qemu-works
+
 airbus 基于qemu与afl的模糊测试工具GUSTAVE https://airbus-seclab.github.io/GUSTAVE_thcon/GUSTAVE_thcon.pdf
 
 Evaluating Techniques for Full System Memory Tracing https://os.itec.kit.edu/downloads/ba_2017_Thomas-Schmidt_Techniques-for-full-system-memory-tracing.pdf
 
 QEMU for Dynamic Memory Analysis of Security Sensitive Software https://www.researchgate.net/publication/334258953_QEMU_for_Dynamic_Memory_Analysis_of_Security_Sensitive_Software
+
+MIPS指令集参考 https://www.anquanke.com/post/id/162992#h3-2
+
+qemu tcg原理 http://www.hellogcc.org/?p=46
+
+提升afl qemu mode速度 https://andreafioraldi.github.io/articles/2019/07/20/aflpp-qemu-compcov.html
+
+https://abiondo.me/2018/09/21/improving-afl-qemu-mode/
